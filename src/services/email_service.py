@@ -1,16 +1,17 @@
 import smtplib
 from email.mime.text import MIMEText
 from typing import List
-import os
 from loguru import logger
+
+from src.core.config import settings
 
 
 class EmailService:
     def __init__(self):
-        self.smtp_server = "smtp.gmail.com"
-        self.smtp_port = 587
-        self.email = os.getenv("EMAIL_EMAIL")
-        self.password = os.getenv("EMAIL_PASSWORD")
+        self.smtp_server = settings.SMTP_SERVER
+        self.smtp_port = settings.SMTP_PORT
+        self.email = settings.SMTP_EMAIL
+        self.password = settings.SMTP_PASSWORD
 
     def send_email(self, subject: str, body: str, recipients: List[str]) -> bool:
         msg = MIMEText(body)
@@ -20,7 +21,7 @@ class EmailService:
         logger.debug(f"Sending {subject} email to {', '.join(recipients)}")
 
         try:
-            with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as smtp:
                 smtp.ehlo()
                 smtp.starttls()
                 smtp.login(self.email, self.password)
