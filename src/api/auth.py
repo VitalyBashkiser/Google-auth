@@ -15,7 +15,7 @@ router = APIRouter(
 
 
 @router.post("/register", response_model=users.UserInDB)
-async def register(scheme_register_user: users.UserCreate, uow: UnitOfWork = Depends(UOWDep)):
+async def register(scheme_register_user: users.UserCreate, uow: UOWDep):
     """
     Register a new user.
     """
@@ -27,7 +27,7 @@ async def register(scheme_register_user: users.UserCreate, uow: UnitOfWork = Dep
 
 
 @router.post("/login")
-async def login(scheme_login_user: users.UserCreate, uow: UnitOfWork = Depends(UOWDep)):
+async def login(scheme_login_user: users.UserCreate, uow: UOWDep):
     """
     Login user and return access token.
     """

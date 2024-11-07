@@ -1,51 +1,49 @@
 from abc import abstractmethod, ABC
-from typing import Type
+from typing import Type, Any
 
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
+
 from src.repositories.users import UsersRepository
 
 
 class ABCUnitOfWork(ABC):
-    users: Type[UsersRepository]
+    session: AsyncSession
+
+    # Repository classes
+    users: UsersRepository
 
     @abstractmethod
-    def __init__(self):
-        ...
+    def __init__(self) -> None:
+        raise NotImplementedError
 
     @abstractmethod
-    async def __aenter__(self):
-        ...
+    async def __aenter__(self) -> "UnitOfWork":
+        raise NotImplementedError
 
     @abstractmethod
-    async def __aexit__(self, *args):
-        ...
-
-    @abstractmethod
-    async def commit(self):
-        ...
-
-    @abstractmethod
-    async def rollback(self):
-        ...
+    async def __aexit__(self, *args: Any) -> None:
+        raise NotImplementedError
 
 
-class UnitOfWork:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+class UnitOfWork(ABCUnitOfWork):
+    def __init__(self) -> None:
+        self.session_maker = Session
+
+    async def __aenter__(self) -> "UnitOfWork":
+        self.session = self.session_maker()
         self.users = UsersRepository(self.session)
 
-    async def __aenter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        if exc_type:
-            await self.rollback()
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        if exc:
+            await self.session.rollback()
         else:
-            await self.commit()
+            await self.session.commit()
         await self.session.close()
+        await logger.complete()
 
-    async def commit(self):
-        await self.session.commit()
-
-    async def rollback(self):
-        await self.session.rollback()
+        if exc:
+            raise exc
