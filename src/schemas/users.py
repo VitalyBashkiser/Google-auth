@@ -1,12 +1,21 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class UserBase(BaseModel):
-    email: str
-
-
-class UserCreate(UserBase):
+    email: EmailStr
     password: str
+
+
+class SchemeLoginUser(UserBase):
+    pass
+
+
+class SchemeRegisterUser(UserBase):
+    pass
+
+
+class SchemeResetPassword(UserBase):
+    pass
 
 
 class UserInDB(UserBase):
@@ -16,3 +25,7 @@ class UserInDB(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class SchemeConfirmRegistration(BaseModel):
+    confirm_reg_token: str

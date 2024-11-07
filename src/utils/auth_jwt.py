@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
-import os
 from typing import Optional
 
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 
+from src.core.config.database import settings
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
 

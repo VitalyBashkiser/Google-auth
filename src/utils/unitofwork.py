@@ -1,10 +1,10 @@
 from abc import abstractmethod, ABC
-from typing import Type, Any
-
+from typing import Any
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.db.db import async_session_maker
 from src.repositories.users import UsersRepository
 
 
@@ -26,13 +26,19 @@ class ABCUnitOfWork(ABC):
     async def __aexit__(self, *args: Any) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    async def commit(self): ...
+
+    @abstractmethod
+    async def rollback(self): ...
+
 
 class UnitOfWork(ABCUnitOfWork):
     def __init__(self) -> None:
-        self.session_maker = Session
+        self.session_factory = async_session_maker
 
     async def __aenter__(self) -> "UnitOfWork":
-        self.session = self.session_maker()
+        self.session = self.session_factory()
         self.users = UsersRepository(self.session)
 
         return self
@@ -47,3 +53,9 @@ class UnitOfWork(ABCUnitOfWork):
 
         if exc:
             raise exc
+
+    async def commit(self):
+        await self.session.commit()
+
+    async def rollback(self):
+        await self.session.rollback()

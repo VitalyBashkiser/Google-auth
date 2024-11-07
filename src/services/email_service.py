@@ -3,15 +3,15 @@ from email.mime.text import MIMEText
 from typing import List
 from loguru import logger
 
-from src.core.config import settings
+from src.core.config.email import smtp_settings
 
 
 class EmailService:
     def __init__(self):
-        self.smtp_server = settings.SMTP_SERVER
-        self.smtp_port = settings.SMTP_PORT
-        self.email = settings.SMTP_EMAIL
-        self.password = settings.SMTP_PASSWORD
+        self.smtp_server = smtp_settings.SMTP_SERVER
+        self.smtp_port = smtp_settings.SMTP_PORT
+        self.email = smtp_settings.SMTP_EMAIL
+        self.password = smtp_settings.SMTP_PASSWORD
 
     def send_email(self, subject: str, body: str, recipients: List[str]) -> bool:
         msg = MIMEText(body)
@@ -33,16 +33,10 @@ class EmailService:
             return False
 
     async def reset_password(self, reset_token: str, email: str, host: str, reg: bool = False) -> bool:
-        if reg:
-            logger.info(f"Confirm reg email to {email}, {reset_token=}")
-            subject = "Confirmation of Registration"
-            url = f"{host}/confirmation_of_registration/{reset_token}"
-            body = f"To confirm your registration, follow the link:\n{url}"
-        else:
-            logger.info(f"Send reset email to {email}, {reset_token=}")
-            subject = "Password Reset"
-            url = f"{host}/reset_password/{reset_token}"
-            body = f"To reset your password, follow the link:\n{url}"
+        logger.info(f"{'Confirm reg' if reg else 'Send'} email to {email}, {reset_token=}")
+        subject = "Confirmation of Registration" if reg else "Password Reset"
+        url = f"{host}/confirmation_of_registration/{reset_token}" if reg else f"{host}/reset_password/{reset_token}"
+        body = f"To {'confirm your registration' if reg else 'reset your password'}, follow the link:\n{url}"
 
         recipients = [email]
         return self.send_email(subject, body, recipients)
