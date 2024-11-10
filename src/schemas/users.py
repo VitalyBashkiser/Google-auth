@@ -1,9 +1,16 @@
 from pydantic import BaseModel, EmailStr
 
+from src.utils import auth_jwt
+
 
 class UserBase(BaseModel):
     email: EmailStr
     password: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
 
 
 class SchemeLoginUser(UserBase):
@@ -11,11 +18,10 @@ class SchemeLoginUser(UserBase):
 
 
 class SchemeRegisterUser(UserBase):
-    pass
-
-
-class SchemeResetPassword(UserBase):
-    pass
+    def model_dump(self, *args, **kwargs):
+        data = super().model_dump(*args, **kwargs)
+        data["hashed_password"] = auth_jwt.hash_password(data.pop("password"))
+        return data
 
 
 class UserInDB(UserBase):
@@ -28,4 +34,4 @@ class UserInDB(UserBase):
 
 
 class SchemeConfirmRegistration(BaseModel):
-    confirm_reg_token: str
+    token: str

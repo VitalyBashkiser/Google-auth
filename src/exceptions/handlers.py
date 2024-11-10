@@ -9,6 +9,8 @@ from src.exceptions.errors import (
     EmailNotConfirmedError,
     InvalidTokenError,
     PasswordResetError,
+    EmailSendError,
+    UserNotAuthenticatedError,
 )
 
 app = FastAPI()
@@ -34,5 +36,13 @@ async def invalid_token_handler(_: Request, exc: InvalidTokenError) -> JSONRespo
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"message": str(exc.msg)})
 
 
-async def handle_password_reset_error(_: Request, exc: PasswordResetError):
+async def handle_password_reset_error(_: Request, exc: PasswordResetError) -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"message": exc.msg})
+
+
+async def email_send_error_handler(_: Request, exc: EmailSendError) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"message": str(exc.msg)})
+
+
+async def user_not_authenticated_handler(_: Request, exc: UserNotAuthenticatedError) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content={"message": exc.msg})

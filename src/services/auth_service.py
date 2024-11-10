@@ -1,20 +1,34 @@
+from typing import Optional
+
+from fastapi import Depends
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
 from src.core.config.database import settings
 from src.models.users import User
 from src.services.email_service import email_service
 from src.utils import auth_jwt
 from src.exceptions.errors import (
-    UserAlreadyExistsError,
     UserNotFoundError,
     InvalidCredentialsError,
     EmailNotConfirmedError,
+    UserAlreadyExistsError,
     InvalidTokenError,
+    EmailSendError,
+    UserNotAuthenticatedError,
 )
 from src.schemas.users import SchemeRegisterUser
-from src.utils.unitofwork import UnitOfWork
+from src.schemas.auth import EmailChangeSchema
+from src.utils.auth_jwt import CheckHTTPBearer
+from src.utils.unitofwork import UnitOfWork, ABCUnitOfWork
 
 
 class AuthService:
-    async def register_user(self, uow: UnitOfWork, user: SchemeRegisterUser) -> int:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    SECRET_KEY = settings.SECRET_KEY
+    ALGORITHM = "HS256"
+
+    async def register_user(self, uow: UnitOfWork, user: SchemeRegisterUser):
         """
         Adds a new user to the database.
 
@@ -28,20 +42,51 @@ class AuthService:
         Raises:
             Exception: If a user with the provided email already exists.
         """
-        existing_user = await uow.users.find_one_or_none(email=user.email)
-        if existing_user:
-            raise UserAlreadyExistsError("A user with this email already exists.")
+        user_dict = user.model_dump()
+        async with uow:
+            if await uow.users.find_one_or_none(email=user_dict["email"]):
+                raise UserAlreadyExistsError(user_dict["email"])
 
-        hashed_password = auth_jwt.hash_password(user.password)
-        new_user = User(email=user.email, hashed_password=hashed_password)
-        await uow.users.add_user(new_user)
+            user_id = await uow.users.add_one(user_dict)
 
-        confirm_token = auth_jwt.create_confirmation_token(new_user.email)
-        host = settings.POSTGRES_HOST
-        await email_service.send_confirmation_email(confirm_token, new_user.email, host)
-        return new_user.id
+            confirm_token = auth_jwt.create_confirmation_token(user_dict["email"])
+            host = settings.POSTGRES_HOST
+            if not await email_service.confirm_email(confirm_token, user_dict["email"], host):
+                raise EmailSendError(email=user_dict["email"], action="send confirmation email")
+            return user_id
 
-    async def login_user(self, uow: UnitOfWork, email: str, password: str):
+    async def confirm_verification_email(self, uow: ABCUnitOfWork, token: str):
+        """
+        Confirm the registration of a user by updating the email confirmation status.
+
+        Args:
+            uow (UnitOfWork): The unit of work instance for database transactions.
+            token: (str): The token of the user whose registration is being confirmed.
+        Returns:
+            UserResponse: The updated user data.
+
+        Raises:
+            Exception: If the user with the specified email is not found.
+        """
+        email = auth_jwt.verify_confirmation_token(token)
+        if email is None:
+            raise InvalidTokenError
+
+        async with uow:
+            user = await uow.users.find_one_or_none(email=email)
+
+            if user is None:
+                raise InvalidCredentialsError
+
+            is_email_confirmed = True
+            data = {"is_email_confirmed": is_email_confirmed, "email": email}
+
+            await uow.users.update_one(user.id, data)
+            await uow.commit()
+
+            return
+
+    async def login_user(self, uow: ABCUnitOfWork, email: str, password: str):
         """
         Authenticate a user by their email and password.
 
@@ -56,19 +101,27 @@ class AuthService:
         Raises:
             Exception: If the credentials are invalid.
         """
-        db_user = await uow.users.find_one_or_none(email=email)
-        if not db_user:
-            raise InvalidCredentialsError("Invalid credentials.")
+        async with uow:
+            user = await uow.users.find_one_or_none(email=email)
+            if not user:
+                raise InvalidCredentialsError
 
-        if not auth_jwt.verify_password(password, db_user.hashed_password):
-            raise InvalidCredentialsError("Invalid credentials.")
+            if not auth_jwt.verify_password(password, user.hashed_password):
+                raise InvalidCredentialsError
 
-        if not db_user.is_email_confirmed:
-            raise EmailNotConfirmedError("Email not confirmed.")
+            if not user.is_email_confirmed:
+                raise EmailNotConfirmedError
 
-        return {"access_token": auth_jwt.create_access_token({"sub": db_user.email}), "token_type": "bearer"}
+            data = {"is_active": True}
+            await uow.users.update_one(user.id, data)
 
-    async def reset_password(self, uow: UnitOfWork, email: str):
+            token_data = {"sub": user.email}
+            access_token = auth_jwt.create_access_token(token_data)
+
+            await uow.commit()
+            return {"access_token": access_token, "token_type": "bearer"}
+
+    async def reset_password(self, uow: UnitOfWork, email: str, jwt_token: Optional[str]):
         """
         Initiate the password reset process for a user.
 
@@ -78,6 +131,7 @@ class AuthService:
         Args:
             uow (UnitOfWork): The unit of work used for database transactions.
             email (str): The email address of the user requesting a password reset.
+            jwt_token (User): The currently authenticated user.
 
         Returns:
             None: This method does not return a value.
@@ -85,41 +139,149 @@ class AuthService:
         Raises:
             UserNotFoundError: If no user with the given email exists.
         """
-        db_user = await uow.users.find_one_or_none(email=email)
-        if not db_user:
-            raise UserNotFoundError("There is no such user.")
+        current_user = await self.get_current_user(jwt_token, uow)
+        if not current_user:
+            raise UserNotAuthenticatedError
 
-        reset_token = auth_jwt.create_reset_token(email)
-        host = "http://localhost:8000"
-        await email_service.reset_password(reset_token, email, host)
+        async with uow:
+            user = await uow.users.find_one_or_none(email=email)
+            if not user:
+                raise UserNotFoundError
 
-    async def confirm_registration(self, uow: UnitOfWork, token: str):
+            reset_token = auth_jwt.create_reset_token(email)
+            host = settings.POSTGRES_HOST
+            await email_service.confirm_email(reset_token, email, host)
+
+    async def reset_confirm_password(self, uow: UnitOfWork, token: str, new_password: str, jwt_token: Optional[str]):
         """
-        Confirm the registration of a user.
-
-        This method verifies the confirmation token sent to the user's email.
-        If the token is valid and corresponds to an existing user, the user's email status is updated to confirmed.
+        Confirm the password reset and update it in the database.
 
         Args:
-            uow (UnitOfWork): The unit of work used for database transactions.
-            token (str): The confirmation token sent to the user's email.
+            uow (UnitOfWork): The unit of work instance for database transactions.
+            token (str): The reset token sent to the user's email.
+            new_password (str): The new password to be set for the user.
+            jwt_token (User): The currently authenticated user.
 
         Returns:
             None: This method does not return a value.
 
         Raises:
-            InvalidTokenError: If the confirmation token is invalid or expired.
-            UserNotFoundError: If no user is found associated with the provided email.
+            InvalidTokenError: If the token is invalid or expired.
+            UserNotFoundError: If the user associated with the token does not exist.
         """
+        current_user = await self.get_current_user(jwt_token, uow)
+        if not current_user:
+            raise UserNotAuthenticatedError
+
         email = auth_jwt.verify_confirmation_token(token)
         if email is None:
-            raise InvalidTokenError("Invalid or expired token.")
+            raise InvalidTokenError
 
-        db_user = await uow.users.find_one_or_none(email=email)
-        if not db_user:
-            raise UserNotFoundError("User not found.")
+        async with uow:
+            user = await uow.users.find_one_or_none(email=email)
+            if not user:
+                raise UserNotFoundError
 
-        db_user.is_email_confirmed = True
+            hashed_password = auth_jwt.hash_password(new_password)
+            data = {"hashed_password": hashed_password}
+            await uow.users.update_one(user.id, data)
+            await uow.commit()
+
+    async def change_email(self, uow: UnitOfWork, data: EmailChangeSchema, jwt_token: Optional[str]):
+        """
+        Initiate the process to change the user's email address.
+
+        Args:
+            uow (UnitOfWork): The unit of work instance for database transactions.
+            data (str): The user's current email and new email.
+            jwt_token (User): The currently authenticated user.
+
+        Returns:
+            None: This method does not return a value.
+
+        Raises:
+            UserNotFoundError: If the user with the current email does not exist.
+        """
+        current_user = await self.get_current_user(jwt_token, uow)
+        if not current_user:
+            raise UserNotAuthenticatedError()
+
+        async with uow:
+            user = await uow.users.find_one_or_none(email=data.old_email)
+            if not user:
+                raise UserNotFoundError
+
+            confirm_token = auth_jwt.create_change_email_token(data.old_email, data.new_email)
+            host = settings.POSTGRES_HOST
+            await email_service.confirm_email(confirm_token, data.new_email, host)
+            await uow.commit()
+
+    async def confirm_change_email(self, uow: UnitOfWork, token: str):
+        """
+        Confirm the email change by validating the token and updating the user's email.
+
+        Args:
+            uow (UnitOfWork): The unit of work instance for database transactions.
+            token (str): The token containing old and new email addresses.
+
+        Returns:
+            None: This method does not return a value.
+
+        Raises:
+            InvalidTokenError: If the token is invalid or expired.
+            UserNotFoundError: If the user with the old email does not exist.
+        """
+        email_data = auth_jwt.verify_change_email_token(token)
+        if not email_data:
+            raise InvalidTokenError
+
+        old_email = email_data["old_email"]
+        new_email = email_data["new_email"]
+
+        async with uow:
+            user = await uow.users.find_one_or_none(email=old_email)
+            if not user:
+                raise UserNotFoundError
+
+            data = {"email": new_email}
+            await uow.users.update_one(user.id, data)
+
+            await uow.commit()
+
+    async def get_current_user(
+        self,
+        token: str = Depends(CheckHTTPBearer),
+        uow: UnitOfWork = Depends(UnitOfWork),
+    ) -> User:
+        """
+        Retrieve the current user based on the provided JWT token.
+
+        Args:
+            token (str): The JWT token from the request.
+            uow (UnitOfWork): The unit of work instance for database transactions.
+
+        Returns:
+            User: The currently authenticated user.
+
+        Raises:
+            UserNotAuthenticatedError: If the token is invalid or the user is not found.
+        """
+        try:
+            payload = jwt.decode(token.credentials, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            if payload["scope"] == "access_token":
+                email = payload["sub"]
+                if email is None:
+                    raise UserNotAuthenticatedError()
+            else:
+                raise UserNotAuthenticatedError()
+        except JWTError:
+            raise UserNotAuthenticatedError()
+
+        async with uow:
+            user = await uow.users.find_one_or_none(email=email)
+            if user is None:
+                raise UserNotAuthenticatedError()
+            return user
 
 
 auth_service = AuthService()

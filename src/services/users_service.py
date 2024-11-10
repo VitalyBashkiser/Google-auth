@@ -1,15 +1,18 @@
-from src.exceptions.errors import UserNotFoundError
+from typing import Optional
+
+from src.exceptions.errors import UserNotFoundError, UserNotAuthenticatedError
 from src.utils.unitofwork import UnitOfWork
 
 
 class UsersService:
-    async def get_user_by_id(self, uow: UnitOfWork, user_id: int):
+    async def get_user_by_id(self, uow: UnitOfWork, user_id: int, jwt_token: Optional[str]):
         """
         Retrieves a user by their ID.
 
         Args:
             uow (UnitOfWork): The unit of work instance for database transactions.
             user_id (int): The ID of the user to be retrieved.
+            jwt_token (User): The currently authenticated user.
 
         Returns:
             UserResponse: The user data.
@@ -17,10 +20,15 @@ class UsersService:
         Raises:
             Exception: If the user with the specified ID is not found.
         """
-        user = await uow.users.find_one(id=user_id)
-        if user is None:
-            raise UserNotFoundError(model_name="User")
-        return user
+        current_user = await self.get_current_user(jwt_token, uow)
+        if not current_user:
+            raise UserNotAuthenticatedError
+
+        async with uow:
+            user = await uow.users.find_one(id=user_id)
+            if user is None:
+                raise UserNotFoundError
+            return user
 
 
 user_service = UsersService()

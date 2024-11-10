@@ -33,8 +33,8 @@ class SQLAlchemyRepository(AbstractRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add_one(self, data: dict) -> int:
-        stmt = insert(self.model).values(**data).returning(self.model.id)
+    async def add_one(self, data: dict) -> User:
+        stmt = insert(self.model).values(**data).returning(self.model)
         res = await self.session.execute(stmt)
         return res.scalar_one()
 
@@ -60,10 +60,10 @@ class SQLAlchemyRepository(AbstractRepository):
     async def find_one(self, **filter_by):
         stmt = select(self.model).filter_by(**filter_by)
         res = await self.session.execute(stmt)
-        res = res.scalar_one().to_read_model()
-        return res
+        return res.scalar_one()
 
     async def add_user(self, user: User) -> int:
-        self.session.add(user)
-        await self.session.commit()
-        return user.id
+        async with self.session.begin():
+            self.session.add(user)
+            await self.session.flush()
+            return user.id

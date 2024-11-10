@@ -44,11 +44,14 @@ class UnitOfWork(ABCUnitOfWork):
         return self
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
-        if exc:
+        if exc_type:
+            logger.debug("Transaction failed. Rolling back.")
             await self.session.rollback()
         else:
+            logger.debug("Transaction succeeded. Committing.")
             await self.session.commit()
         await self.session.close()
+        logger.debug("Transaction ended.")
         await logger.complete()
 
         if exc:

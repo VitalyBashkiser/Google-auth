@@ -10,6 +10,8 @@ from src.exceptions.errors import (
     EmailNotConfirmedError,
     InvalidTokenError,
     PasswordResetError,
+    EmailSendError,
+    UserNotAuthenticatedError,
 )
 from src.exceptions.handlers import (
     user_not_found_handler,
@@ -18,6 +20,8 @@ from src.exceptions.handlers import (
     email_not_confirmed_handler,
     invalid_token_handler,
     handle_password_reset_error,
+    email_send_error_handler,
+    user_not_authenticated_handler,
 )
 
 app = FastAPI(title="Authorisation via Email")
@@ -28,6 +32,8 @@ app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
 app.add_exception_handler(EmailNotConfirmedError, email_not_confirmed_handler)
 app.add_exception_handler(InvalidTokenError, invalid_token_handler)
 app.add_exception_handler(PasswordResetError, handle_password_reset_error)
+app.add_exception_handler(EmailSendError, email_send_error_handler)
+app.add_exception_handler(UserNotAuthenticatedError, user_not_authenticated_handler)
 app.add_middleware(ExceptionHandlerMiddleware)
 
 

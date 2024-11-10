@@ -17,9 +17,17 @@ class ObjectAlreadyExists(Exception):
         super().__init__(self.msg)
 
 
+class EmailSendError(Exception):
+    def __init__(self, email: str, action: str = "send email"):
+        self.msg = f"Failed to {action} to {email}. Please try again."
+        self.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        super().__init__(self.msg)
+
+
 class UserAlreadyExistsError(ObjectAlreadyExists):
     def __init__(self, email: str):
-        super().__init__("User", email)
+        super().__init__(model_name="User", attr=email)
+        self.email = email
 
 
 class UserNotFoundError(ObjectNotFound):
@@ -56,4 +64,11 @@ class PasswordResetError(AuthenticationError):
     def __init__(self):
         self.msg = "Failed to reset password. Please try again."
         self.status_code = status.HTTP_400_BAD_REQUEST
+        super().__init__(self.msg)
+
+
+class UserNotAuthenticatedError(InvalidCredentialsError):
+    def __init__(self):
+        self.msg = "User is not authenticated. Please provide valid credentials."
+        self.status_code = status.HTTP_401_UNAUTHORIZED
         super().__init__(self.msg)

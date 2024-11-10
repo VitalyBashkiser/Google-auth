@@ -25,14 +25,24 @@ class EmailService:
                 smtp.ehlo()
                 smtp.starttls()
                 smtp.login(self.email, self.password)
-                smtp.sendmail(from_addr=self.email, to_addrs=recipients, msg=msg.as_string())
+                smtp.sendmail(
+                    from_addr=self.email,
+                    to_addrs=recipients,
+                    msg=msg.as_string()
+                )
             logger.info("Email sent successfully.")
             return True
         except Exception as e:
             logger.exception(f"Failed to send email: {e}")
             return False
 
-    async def reset_password(self, reset_token: str, email: str, host: str, reg: bool = False) -> bool:
+    async def confirm_email(
+            self,
+            reset_token: str,
+            email: str,
+            host: str,
+            reg: bool = False
+    ) -> bool:
         logger.info(f"{'Confirm reg' if reg else 'Send'} email to {email}, {reset_token=}")
         subject = "Confirmation of Registration" if reg else "Password Reset"
         url = f"{host}/confirmation_of_registration/{reset_token}" if reg else f"{host}/reset_password/{reset_token}"
