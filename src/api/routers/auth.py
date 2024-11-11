@@ -1,16 +1,20 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from starlette import status
 
-from src.api.dependencies import UOWDep, get_auth_service
+from src.api.dependencies import UOWDep, AuthServiceDep, JWTTokenDep
 from src.models.users import User
-from src.schemas.auth import ResetPasswordConfirmSchema, ResetPasswordSchema, EmailChangeSchema, OneTokenSchema
+from src.schemas.auth import (
+    ResetPasswordConfirmSchema,
+    ResetPasswordSchema,
+    EmailChangeSchema,
+    OneTokenSchema
+)
 from src.schemas.users import (
     SchemeConfirmRegistration,
     SchemeRegisterUser,
     SchemeLoginUser,
 )
 from src.services.auth_service import AuthService
-from src.utils.auth_jwt import CheckHTTPBearer
 
 router = APIRouter(
     prefix="/services",
@@ -19,7 +23,7 @@ router = APIRouter(
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(uow: UOWDep, user: SchemeRegisterUser, auth_service: AuthService = Depends(get_auth_service)):
+async def register(uow: UOWDep, user: SchemeRegisterUser, auth_service: AuthServiceDep):
     """Register a new user.
 
     This endpoint allows a new user to register by providing user details. After successful registration, the details of the created user are returned.
@@ -37,7 +41,9 @@ async def register(uow: UOWDep, user: SchemeRegisterUser, auth_service: AuthServ
 
 @router.post("/verification_email")
 async def verification_email(
-    uow: UOWDep, token: SchemeConfirmRegistration, auth_service: AuthService = Depends(get_auth_service)
+        uow: UOWDep,
+        token: SchemeConfirmRegistration,
+        auth_service: AuthServiceDep
 ):
     """
     Confirm the registration of a user using a confirmation token.
@@ -58,7 +64,7 @@ async def verification_email(
 
 
 @router.post("/login")
-async def login(uow: UOWDep, user: SchemeLoginUser, auth_service: AuthService = Depends(get_auth_service)):
+async def login(uow: UOWDep, user: SchemeLoginUser, auth_service: AuthServiceDep):
     """Authenticate a user and generate a token.
 
     This endpoint allows a user to login by providing email and password. Upon successful authentication, an access token is generated and returned.
@@ -78,8 +84,8 @@ async def login(uow: UOWDep, user: SchemeLoginUser, auth_service: AuthService = 
 async def password_reset(
     uow: UOWDep,
     reset_password: ResetPasswordSchema,
-    auth_service: AuthService = Depends(get_auth_service),
-    jwt_token: str | None = Depends(CheckHTTPBearer()),
+    auth_service: AuthServiceDep,
+    jwt_token: JWTTokenDep,
 ):
     """
     Reset the password for a user.
@@ -104,8 +110,8 @@ async def password_reset(
 async def reset_password_confirm(
     uow: UOWDep,
     data: ResetPasswordConfirmSchema,
-    auth_service: AuthService = Depends(get_auth_service),
-    jwt_token: str | None = Depends(CheckHTTPBearer()),
+    auth_service: AuthServiceDep,
+    jwt_token: JWTTokenDep,
 ):
     """
     Confirm the password reset with the provided token and new password.
@@ -126,8 +132,8 @@ async def reset_password_confirm(
 async def change_email(
     email_data: EmailChangeSchema,
     uow: UOWDep,
-    auth_service: AuthService = Depends(get_auth_service),
-    jwt_token: str | None = Depends(CheckHTTPBearer()),
+    auth_service: AuthServiceDep,
+    jwt_token: JWTTokenDep,
 ):
     """
     Initiate the email change process for the user.
@@ -148,8 +154,8 @@ async def change_email(
 async def confirm_email_change(
     data: OneTokenSchema,
     uow: UOWDep,
-    auth_service: AuthService = Depends(get_auth_service),
-    jwt_token: str | None = Depends(CheckHTTPBearer()),
+    auth_service: AuthServiceDep,
+    jwt_token: JWTTokenDep,
 ):
     """
     Confirm the email change using the provided token.
