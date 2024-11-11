@@ -5,7 +5,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from src.core.config.logger import log
+from src.core.config import logger
 
 
 class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
@@ -38,9 +38,8 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         except Exception as err:
             trace = inspect.trace()[-1]
-
             # Log the error message along with relevant details
-            log.error(
+            logger.error(
                 f"""
                                 Message: {str(err)}
                                 File: {trace.filename}

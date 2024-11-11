@@ -1,5 +1,5 @@
-import logging
+from loguru import logger
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger.add("app.log", format="{time} {level} {message}", level="INFO")
 
-log = logging.getLogger(__name__)
+__all__ = ["logger"]
