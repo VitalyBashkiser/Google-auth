@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from src.models.users import User
 from src.schemas.users import UserInDB
 from src.services.users_service import user_service
-from src.api.dependencies import UOWDep
-from src.utils.auth_jwt import CheckHTTPBearer
+from src.api.dependencies import UOWDep, JWTTokenDep
 
 router = APIRouter(
     prefix="/users",
@@ -13,7 +12,7 @@ router = APIRouter(
 
 
 @router.get("/{user_id}", response_model=UserInDB)
-async def read_user(uow: UOWDep, user_id: int, jwt_token: str | None = Depends(CheckHTTPBearer())):
+async def read_user(uow: UOWDep, user_id: int, jwt_token: JWTTokenDep):
     """Retrieve a user by their ID.
 
     Args:
