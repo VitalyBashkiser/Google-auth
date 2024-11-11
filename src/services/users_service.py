@@ -1,11 +1,9 @@
-from typing import Optional
-
 from src.exceptions.errors import UserNotFoundError, UserNotAuthenticatedError
 from src.utils.unitofwork import UnitOfWork
 
 
 class UsersService:
-    async def get_user_by_id(self, uow: UnitOfWork, user_id: int, jwt_token: Optional[str]):
+    async def get_user_by_id(self, uow: UnitOfWork, user_id: int, jwt_token: str | None):
         """
         Retrieves a user by their ID.
 
