@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends
 
 from src.models.users import User
@@ -15,11 +13,7 @@ router = APIRouter(
 
 
 @router.get("/{user_id}", response_model=UserInDB)
-async def read_user(
-    uow: UOWDep,
-    user_id: int,
-    jwt_token: Optional[str] = Depends(CheckHTTPBearer()),
-):
+async def read_user(uow: UOWDep, user_id: int, jwt_token: str | None = Depends(CheckHTTPBearer())):
     """Retrieve a user by their ID.
 
     Args:
