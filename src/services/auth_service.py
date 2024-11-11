@@ -2,6 +2,7 @@ from fastapi import Depends
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+from src.core.config.app_settings import AppSettings
 from src.core.config.database import settings
 from src.models.users import User
 from src.services.email_service import email_service
@@ -48,7 +49,7 @@ class AuthService:
             user_id = await uow.users.add_one(user_dict)
 
             confirm_token = auth_jwt.create_confirmation_token(user_dict["email"])
-            host = "0.0.0.0"
+            host = AppSettings.HOST
             if not await email_service.confirm_email(confirm_token, user_dict["email"], host):
                 raise EmailSendError(email=user_dict["email"], action="send confirmation email")
             return user_id
@@ -73,7 +74,7 @@ class AuthService:
         async with uow:
             user = await uow.users.find_one_or_none(email=email)
 
-            if user is None:
+            if not user:
                 raise InvalidCredentialsError
 
             is_email_confirmed = True
@@ -147,7 +148,7 @@ class AuthService:
                 raise UserNotFoundError
 
             reset_token = auth_jwt.create_reset_token(email)
-            host = "0.0.0.0"
+            host = AppSettings.HOST
             await email_service.confirm_email(reset_token, email, host)
 
     async def reset_confirm_password(self, uow: UnitOfWork, token: str, new_password: str, jwt_token: str | None):
@@ -210,7 +211,7 @@ class AuthService:
                 raise UserNotFoundError
 
             confirm_token = auth_jwt.create_change_email_token(data.old_email, data.new_email)
-            host = "0.0.0.0"
+            host = AppSettings.HOST
             await email_service.confirm_email(confirm_token, data.new_email, host)
             await uow.commit()
 
@@ -282,7 +283,7 @@ class AuthService:
 
         async with uow:
             user = await uow.users.find_one_or_none(email=email)
-            if user is None:
+            if not user:
                 raise UserNotAuthenticatedError
             return user
 
