@@ -1,9 +1,7 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends
 from starlette import status
 
-from src.api.dependencies import UOWDep
+from src.api.dependencies import UOWDep, get_auth_service
 from src.models.users import User
 from src.schemas.auth import ResetPasswordConfirmSchema, ResetPasswordSchema, EmailChangeSchema, OneTokenSchema
 from src.schemas.users import (
@@ -21,11 +19,7 @@ router = APIRouter(
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(
-    uow: UOWDep,
-    user: SchemeRegisterUser,
-    auth_service: AuthService = Depends(),
-):
+async def register(uow: UOWDep, user: SchemeRegisterUser, auth_service: AuthService = Depends(get_auth_service)):
     """Register a new user.
 
     This endpoint allows a new user to register by providing user details. After successful registration, the details of the created user are returned.
@@ -37,15 +31,14 @@ async def register(
 
     Returns:
         UserSchema: Details of the newly created user.
-
-    Raises:
-        Exception: May raise an Exception if registration fails.
     """
     await auth_service.register_user(uow, user)
 
 
 @router.post("/verification_email")
-async def verification_email(uow: UOWDep, token: SchemeConfirmRegistration, auth_service: AuthService = Depends()):
+async def verification_email(
+    uow: UOWDep, token: SchemeConfirmRegistration, auth_service: AuthService = Depends(get_auth_service)
+):
     """
     Confirm the registration of a user using a confirmation token.
 
@@ -60,18 +53,12 @@ async def verification_email(uow: UOWDep, token: SchemeConfirmRegistration, auth
 
     Returns:
         dict: A response indicating that the email has been confirmed successfully.
-
-    Raises:
-        InvalidTokenError: If the provided confirmation token is invalid or expired, an exception is raised,
-                           indicating the issue with the token.
-        UserNotFoundError: If no user is found associated with the provided confirmation token, an exception is raised,
-                           indicating that the user does not exist.
     """
     return await auth_service.confirm_verification_email(uow, token.token)
 
 
 @router.post("/login")
-async def login(uow: UOWDep, user: SchemeLoginUser, auth_service: AuthService = Depends()):
+async def login(uow: UOWDep, user: SchemeLoginUser, auth_service: AuthService = Depends(get_auth_service)):
     """Authenticate a user and generate a token.
 
     This endpoint allows a user to login by providing email and password. Upon successful authentication, an access token is generated and returned.
@@ -83,9 +70,6 @@ async def login(uow: UOWDep, user: SchemeLoginUser, auth_service: AuthService = 
 
     Returns:
         TokenResponse: Contains the access token and the token type.
-
-    Raises:
-        Exception: May raise an Exception if authentication fails.
     """
     return await auth_service.login_user(uow, user.email, user.password)
 
@@ -94,8 +78,8 @@ async def login(uow: UOWDep, user: SchemeLoginUser, auth_service: AuthService = 
 async def password_reset(
     uow: UOWDep,
     reset_password: ResetPasswordSchema,
-    auth_service: AuthService = Depends(),
-    jwt_token: Optional[str] = Depends(CheckHTTPBearer()),
+    auth_service: AuthService = Depends(get_auth_service),
+    jwt_token: str | None = Depends(CheckHTTPBearer()),
 ):
     """
     Reset the password for a user.
@@ -112,10 +96,6 @@ async def password_reset(
 
     Returns:
         dict: A response indicating that the password reset email has been sent.
-
-    Raises:
-        UserNotFoundError: If no user is found with the provided email address, an exception is raised,
-                           indicating that the user does not exist.
     """
     return await auth_service.reset_password(uow, reset_password.emailm, jwt_token)
 
@@ -124,8 +104,8 @@ async def password_reset(
 async def reset_password_confirm(
     uow: UOWDep,
     data: ResetPasswordConfirmSchema,
-    auth_service: AuthService = Depends(),
-    jwt_token: Optional[str] = Depends(CheckHTTPBearer()),
+    auth_service: AuthService = Depends(get_auth_service),
+    jwt_token: str | None = Depends(CheckHTTPBearer()),
 ):
     """
     Confirm the password reset with the provided token and new password.
@@ -146,8 +126,8 @@ async def reset_password_confirm(
 async def change_email(
     email_data: EmailChangeSchema,
     uow: UOWDep,
-    auth_service: AuthService = Depends(),
-    jwt_token: Optional[str] = Depends(CheckHTTPBearer()),
+    auth_service: AuthService = Depends(get_auth_service),
+    jwt_token: str | None = Depends(CheckHTTPBearer()),
 ):
     """
     Initiate the email change process for the user.
@@ -168,8 +148,8 @@ async def change_email(
 async def confirm_email_change(
     data: OneTokenSchema,
     uow: UOWDep,
-    auth_service: AuthService = Depends(),
-    jwt_token: Optional[str] = Depends(CheckHTTPBearer()),
+    auth_service: AuthService = Depends(get_auth_service),
+    jwt_token: str | None = Depends(CheckHTTPBearer()),
 ):
     """
     Confirm the email change using the provided token.

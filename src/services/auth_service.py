@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import Depends
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -50,7 +48,7 @@ class AuthService:
             user_id = await uow.users.add_one(user_dict)
 
             confirm_token = auth_jwt.create_confirmation_token(user_dict["email"])
-            host = settings.POSTGRES_HOST
+            host = "0.0.0.0"
             if not await email_service.confirm_email(confirm_token, user_dict["email"], host):
                 raise EmailSendError(email=user_dict["email"], action="send confirmation email")
             return user_id
@@ -121,7 +119,7 @@ class AuthService:
             await uow.commit()
             return {"access_token": access_token, "token_type": "bearer"}
 
-    async def reset_password(self, uow: UnitOfWork, email: str, jwt_token: Optional[str]):
+    async def reset_password(self, uow: UnitOfWork, email: str, jwt_token: str | None):
         """
         Initiate the password reset process for a user.
 
@@ -149,10 +147,10 @@ class AuthService:
                 raise UserNotFoundError
 
             reset_token = auth_jwt.create_reset_token(email)
-            host = settings.POSTGRES_HOST
+            host = "0.0.0.0"
             await email_service.confirm_email(reset_token, email, host)
 
-    async def reset_confirm_password(self, uow: UnitOfWork, token: str, new_password: str, jwt_token: Optional[str]):
+    async def reset_confirm_password(self, uow: UnitOfWork, token: str, new_password: str, jwt_token: str | None):
         """
         Confirm the password reset and update it in the database.
 
@@ -187,7 +185,7 @@ class AuthService:
             await uow.users.update_one(user.id, data)
             await uow.commit()
 
-    async def change_email(self, uow: UnitOfWork, data: EmailChangeSchema, jwt_token: Optional[str]):
+    async def change_email(self, uow: UnitOfWork, data: EmailChangeSchema, jwt_token: str | None):
         """
         Initiate the process to change the user's email address.
 
@@ -212,17 +210,18 @@ class AuthService:
                 raise UserNotFoundError
 
             confirm_token = auth_jwt.create_change_email_token(data.old_email, data.new_email)
-            host = settings.POSTGRES_HOST
+            host = "0.0.0.0"
             await email_service.confirm_email(confirm_token, data.new_email, host)
             await uow.commit()
 
-    async def confirm_change_email(self, uow: UnitOfWork, token: str):
+    async def confirm_change_email(self, uow: UnitOfWork, token: str, jwt_token: str | None):
         """
         Confirm the email change by validating the token and updating the user's email.
 
         Args:
             uow (UnitOfWork): The unit of work instance for database transactions.
             token (str): The token containing old and new email addresses.
+            jwt_token (User): The currently authenticated user.
 
         Returns:
             None: This method does not return a value.
@@ -231,6 +230,10 @@ class AuthService:
             InvalidTokenError: If the token is invalid or expired.
             UserNotFoundError: If the user with the old email does not exist.
         """
+        current_user = await self.get_current_user(jwt_token, uow)
+        if not current_user:
+            raise UserNotAuthenticatedError()
+
         email_data = auth_jwt.verify_change_email_token(token)
         if not email_data:
             raise InvalidTokenError
