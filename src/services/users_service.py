@@ -24,7 +24,7 @@ class UsersService:
 
         async with uow:
             user = await uow.users.find_one(id=user_id)
-            if user is None:
+            if not user:
                 raise UserNotFoundError
             return user
 
