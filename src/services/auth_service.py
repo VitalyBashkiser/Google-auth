@@ -270,21 +270,40 @@ class AuthService:
             UserNotAuthenticatedError: If the token is invalid or the user is not found.
         """
         try:
-            payload = jwt.decode(token.credentials, self.SECRET_KEY, algorithms=[self.ALGORITHM])
-            if payload["scope"] == "access_token":
-                email = payload["sub"]
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            if payload.get("scope") == "access_token":
+                email = payload.get("sub")
                 if email is None:
-                    raise UserNotAuthenticatedError()
+                    raise UserNotAuthenticatedError
             else:
-                raise UserNotAuthenticatedError()
+                raise UserNotAuthenticatedError
         except JWTError:
-            raise UserNotAuthenticatedError()
+            raise UserNotAuthenticatedError
 
         async with uow:
             user = await uow.users.find_one_or_none(email=email)
             if user is None:
-                raise UserNotAuthenticatedError()
+                raise UserNotAuthenticatedError
             return user
+
+    async def decode_token(self, token: str) -> dict:
+        """
+        Decode a JWT token without verifying its validity.
+
+        Args:
+            token (str): The JWT token to decode.
+
+        Returns:
+            dict: The decoded token payload.
+
+        Raises:
+            HTTPException: If the token is invalid.
+        """
+        try:
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            return payload
+        except JWTError:
+            raise UserNotAuthenticatedError
 
 
 auth_service = AuthService()

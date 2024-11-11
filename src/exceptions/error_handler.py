@@ -5,7 +5,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from src.core.config import logger
+from src.core.config.logger import logger
 
 
 class ExceptionHandlerMiddleware(BaseHTTPMiddleware):

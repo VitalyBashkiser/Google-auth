@@ -67,7 +67,7 @@ class PasswordResetError(AuthenticationError):
         super().__init__(self.msg)
 
 
-class UserNotAuthenticatedError(InvalidCredentialsError):
+class UserNotAuthenticatedError(AuthenticationError):
     def __init__(self):
         self.msg = "User is not authenticated. Please provide valid credentials."
         self.status_code = status.HTTP_401_UNAUTHORIZED

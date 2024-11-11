@@ -97,7 +97,7 @@ async def password_reset(
     Returns:
         dict: A response indicating that the password reset email has been sent.
     """
-    return await auth_service.reset_password(uow, reset_password.emailm, jwt_token)
+    return await auth_service.reset_password(uow, reset_password.email, jwt_token)
 
 
 @router.post("/password_reset/confirm", status_code=status.HTTP_201_CREATED)
