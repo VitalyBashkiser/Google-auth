@@ -9,6 +9,8 @@ from src.exceptions.errors import (
     PasswordResetError,
     EmailSendError,
     UserNotAuthenticatedError,
+    PermissionDeniedError,
+    SuperuserPermissionError,
 )
 from src.exceptions.handlers import (
     user_not_found_handler,
@@ -19,6 +21,8 @@ from src.exceptions.handlers import (
     handle_password_reset_error,
     email_send_error_handler,
     user_not_authenticated_handler,
+    permission_denied_error_handler,
+    superuser_permission_error_handler,
 )
 
 exception_handlers = [
@@ -30,6 +34,8 @@ exception_handlers = [
     (PasswordResetError, handle_password_reset_error),
     (EmailSendError, email_send_error_handler),
     (UserNotAuthenticatedError, user_not_authenticated_handler),
+    (PermissionDeniedError, permission_denied_error_handler),
+    (SuperuserPermissionError, superuser_permission_error_handler),
 ]
 
 

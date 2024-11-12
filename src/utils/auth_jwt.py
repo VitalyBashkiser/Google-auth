@@ -64,17 +64,17 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
 
 
 def create_change_email_token(old_email: str, new_email: str) -> str:
-    """Create a token for email change confirmation.
+    """Create a token for templates change confirmation.
 
-    Generates a token to confirm a user's email change request,
-    encoding both old and new email addresses.
+    Generates a token to confirm a user's templates change request,
+    encoding both old and new templates addresses.
 
     Args:
-        old_email (str): The current email of the user.
-        new_email (str): The new email address to be set for the user.
+        old_email (str): The current templates of the user.
+        new_email (str): The new templates address to be set for the user.
 
     Returns:
-        str: The generated JWT token for email change.
+        str: The generated JWT token for templates change.
     """
     data = {"old_email": old_email, "new_email": new_email}
     return create_access_token(data, expires_delta=timedelta(hours=1))
@@ -83,13 +83,13 @@ def create_change_email_token(old_email: str, new_email: str) -> str:
 def create_confirmation_token(email: str) -> str:
     """Create a confirmation token for user registration.
 
-    Generates a token for confirming a new user's email address upon registration.
+    Generates a token for confirming a new user's templates address upon registration.
 
     Args:
-        email (str): The email address to confirm.
+        email (str): The templates address to confirm.
 
     Returns:
-        str: The generated JWT token for email confirmation.
+        str: The generated JWT token for templates confirmation.
     """
     return create_access_token({"sub": email}, expires_delta=timedelta(hours=1))
 
@@ -101,7 +101,7 @@ def create_reset_token(email: str) -> str:
     typically short-lived for security.
 
     Args:
-        email (str): The email address associated with the password reset.
+        email (str): The templates address associated with the password reset.
 
     Returns:
         str: The generated JWT token for password reset.
@@ -112,13 +112,13 @@ def create_reset_token(email: str) -> str:
 def verify_confirmation_token(token: str) -> str | None:
     """Verify a confirmation token.
 
-    Decodes and verifies a confirmation token to retrieve the associated email.
+    Decodes and verifies a confirmation token to retrieve the associated templates.
 
     Args:
         token (str): The JWT token to verify.
 
     Returns:
-        str | None: The email address if verification is successful,
+        str | None: The templates address if verification is successful,
         or None if the token is invalid or expired.
     """
     try:
@@ -129,10 +129,10 @@ def verify_confirmation_token(token: str) -> str | None:
 
 
 def verify_change_email_token(token: str) -> dict | None:
-    """Verify an email change token.
+    """Verify an templates change token.
 
-    Decodes and verifies an email change token to retrieve the old
-    and new email addresses.
+    Decodes and verifies an templates change token to retrieve the old
+    and new templates addresses.
 
     Args:
         token (str): The JWT token to verify.
