@@ -11,6 +11,7 @@ from src.exceptions.errors import (
     UserNotAuthenticatedError,
     PermissionDeniedError,
     SuperuserPermissionError,
+    PageNotFoundError,
 )
 from src.exceptions.handlers import (
     user_not_found_handler,
@@ -23,6 +24,7 @@ from src.exceptions.handlers import (
     user_not_authenticated_handler,
     permission_denied_error_handler,
     superuser_permission_error_handler,
+    page_not_found_handler,
 )
 
 exception_handlers = [
@@ -36,6 +38,7 @@ exception_handlers = [
     (UserNotAuthenticatedError, user_not_authenticated_handler),
     (PermissionDeniedError, permission_denied_error_handler),
     (SuperuserPermissionError, superuser_permission_error_handler),
+    (PageNotFoundError, page_not_found_handler),
 ]
 
 

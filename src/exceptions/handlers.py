@@ -10,7 +10,7 @@ from src.exceptions.errors import (
     InvalidTokenError,
     PasswordResetError,
     EmailSendError,
-    UserNotAuthenticatedError,
+    UserNotAuthenticatedError, PageNotFoundError,
     PermissionDeniedError,
     SuperuserPermissionError,
 )
@@ -47,7 +47,11 @@ async def email_send_error_handler(_: Request, exc: EmailSendError) -> JSONRespo
 
 
 async def user_not_authenticated_handler(_: Request, exc: UserNotAuthenticatedError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content={"message": exc.msg})
+    return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"message": exc.msg})
+
+
+async def page_not_found_handler(_: Request, exc: PageNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"message": str(exc.msg)})
 
 
 async def permission_denied_error_handler(_: Request, exc: PermissionDeniedError) -> JSONResponse:

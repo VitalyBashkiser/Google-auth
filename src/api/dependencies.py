@@ -1,7 +1,9 @@
 from typing import Annotated
 
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.db import get_async_session
 from src.enums.permissions import Permission
 from src.exceptions.errors import PermissionDeniedError
 from src.models.users import User
@@ -15,6 +17,7 @@ AuthServiceDep = Annotated[AuthService, Depends(AuthService)]
 JWTTokenDep = Annotated[str | None, Depends(CheckHTTPBearer())]
 UserDep = Annotated[User, Depends(AuthService().get_current_user)]
 AdminServiceDep = Annotated[AdminService, Depends(AdminService)]
+SessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 
 
 async def is_superuser(current_user: UserDep) -> UserDep:

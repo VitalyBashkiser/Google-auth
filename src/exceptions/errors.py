@@ -31,6 +31,12 @@ class PermissionDeniedError(Exception):
         super().__init__(self.msg)
 
 
+class PageNotFoundError(ObjectNotFound):
+    def __init__(self, url: str) -> None:
+        super().__init__(model_name="Page", id_=url)
+        self.msg = f"Failed to retrieve the webpage at {url}."
+
+
 class UserAlreadyExistsError(ObjectAlreadyExists):
     def __init__(self, email: str):
         super().__init__(model_name="User", attr=email)
