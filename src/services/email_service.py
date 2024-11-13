@@ -44,24 +44,27 @@ class EmailService:
             host (str): The host URL.
             email_type (Messages): The type of email to send (confirmation, password reset, or email change).
         """
+        email_data = {
+            Messages.EMAIL_CONFIRMATION: {
+                "subject": "Confirm Your Registration",
+                "url": f"{host}/auth/confirm-registration?token={token}"
+            },
+            Messages.PASSWORD_RESET: {
+                "subject": "Password Reset",
+                "url": f"{host}/auth/reset-password?token={token}"
+            },
+            Messages.CHANGE_EMAIL: {
+                "subject": "Confirm Email Change",
+                "url": f"{host}/auth/change-email?token={token}"
+            }
+        }
+        logger.info(f'Send reset email to {email}, {token=}')
 
-        if email_type == Messages.EMAIL_CONFIRMATION:
-            subject = "Confirm Your Registration"
-            confirmation_url = f"{host}/auth/confirm-registration?token={token}"
-            context = {"username": username, "confirmation_url": confirmation_url}
-
-        elif email_type == Messages.PASSWORD_RESET:
-            subject = "Password Reset"
-            reset_url = f"{host}/auth/reset-password?token={token}"
-            context = {"username": username, "reset_url": reset_url}
-
-        elif email_type == Messages.CHANGE_EMAIL:
-            subject = "Confirm Email Change"
-            confirmation_url = f"{host}/auth/change-email?token={token}"
-            context = {"username": username, "confirmation_url": confirmation_url}
-
-        else:
+        if email_type not in email_data:
             raise ValueError("Invalid email type")
+
+        subject = email_data[email_type]["subject"]
+        context = {"username": username, "confirmation_url": email_data[email_type]["url"]}
 
         body = await render_message(email_type, context)
         recipients = [email]

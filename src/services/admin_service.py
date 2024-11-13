@@ -35,7 +35,7 @@ class AdminService:
 
             user_email = user.email
 
-            if user.permissions is None:
+            if not user.permissions:
                 user.permissions = []
 
             if permission not in user.permissions:
@@ -72,7 +72,7 @@ class AdminService:
                 raise UserNotFoundError
 
             user_email = user.email
-            if user.permissions is None:
+            if not user.permissions:
                 user.permissions = []
 
             if permission in user.permissions:
@@ -86,7 +86,6 @@ class AdminService:
                 "date": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
             }
             return await render_message(Messages.PERMISSION_REVOKED, context)
-
 
     @staticmethod
     async def access_admin_panel():
