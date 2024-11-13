@@ -7,7 +7,7 @@ class OneTokenSchema(BaseModel):
 
     Attributes:
         token (str): The token value used for actions like
-        email verification or password reset.
+        templates verification or password reset.
     """
 
     token: str
@@ -18,7 +18,7 @@ class ResetPasswordSchema(BaseModel):
     Schema for initiating a password reset request.
 
     Attributes:
-        email (EmailStr): The email address of the user requesting the password reset.
+        email (EmailStr): The templates address of the user requesting the password reset.
     """
 
     email: EmailStr
@@ -30,7 +30,7 @@ class ResetPasswordConfirmSchema(BaseModel):
 
     Attributes:
         new_password (str): The new password that the user wants to set.
-        token (str): The token received in the password reset email.
+        token (str): The token received in the password reset templates.
     """
 
     new_password: str
@@ -39,11 +39,11 @@ class ResetPasswordConfirmSchema(BaseModel):
 
 class EmailChangeSchema(BaseModel):
     """
-    Schema for requesting an email change, containing both old and new email addresses.
+    Schema for requesting an templates change, containing both old and new templates addresses.
 
     Attributes:
-        old_email (EmailStr): The current email address of the user.
-        new_email (EmailStr): The new email address the user wants to set.
+        old_email (EmailStr): The current templates address of the user.
+        new_email (EmailStr): The new templates address the user wants to set.
     """
 
     old_email: EmailStr
