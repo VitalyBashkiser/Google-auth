@@ -5,6 +5,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.db import async_session_maker
+from src.repositories.company import CompanyRepository
 from src.repositories.users import UsersRepository
 
 
@@ -13,6 +14,7 @@ class ABCUnitOfWork(ABC):
 
     # Repository classes
     users: UsersRepository
+    company: CompanyRepository
 
     @abstractmethod
     def __init__(self) -> None:
@@ -40,6 +42,7 @@ class UnitOfWork(ABCUnitOfWork):
     async def __aenter__(self) -> "UnitOfWork":
         self.session = self.session_factory()
         self.users = UsersRepository(self.session)
+        self.company = CompanyRepository(self.session)
 
         return self
 
