@@ -5,10 +5,10 @@ from src.utils import auth_jwt
 
 class UserBase(BaseModel):
     """
-    Base schema for user data containing email and password fields.
+    Base schema for user data containing templates and password fields.
 
     Attributes:
-        email (EmailStr): The user's email address.
+        email (EmailStr): The user's templates address.
         password (str): The user's plain text password.
     """
 
@@ -22,7 +22,7 @@ class UserResponse(BaseModel):
 
     Attributes:
         id (int): The unique identifier of the user.
-        email (EmailStr): The user's email address.
+        email (EmailStr): The user's templates address.
     """
 
     id: int
@@ -34,7 +34,7 @@ class SchemeLoginUser(UserBase):
     Schema for user login, inheriting from UserBase.
 
     Inherits:
-        email (EmailStr): User's email.
+        templates (EmailStr): User's templates.
         password (str): User's password.
     """
 
@@ -49,7 +49,7 @@ class SchemeRegisterUser(UserBase):
         model_dump: Overrides BaseModel method to hash the password before storing.
 
     Inherits:
-        email (EmailStr): User's email.
+        templates (EmailStr): User's templates.
         password (str): User's password.
     """
 
@@ -72,10 +72,10 @@ class UserInDB(UserBase):
     Attributes:
         id (int): Unique identifier of the user.
         is_active (bool): Status indicating if the user is active.
-        is_email_confirmed (bool): Status indicating if the user's email is confirmed.
+        is_email_confirmed (bool): Status indicating if the user's templates is confirmed.
 
     Inherits:
-        email (EmailStr): User's email.
+        templates (EmailStr): User's templates.
         password (str): User's password.
     """
 

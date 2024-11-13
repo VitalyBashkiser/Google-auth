@@ -11,6 +11,8 @@ from src.exceptions.errors import (
     PasswordResetError,
     EmailSendError,
     UserNotAuthenticatedError,
+    PermissionDeniedError,
+    SuperuserPermissionError,
 )
 
 app = FastAPI()
@@ -46,3 +48,17 @@ async def email_send_error_handler(_: Request, exc: EmailSendError) -> JSONRespo
 
 async def user_not_authenticated_handler(_: Request, exc: UserNotAuthenticatedError) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"message": exc.msg})
+
+
+async def permission_denied_error_handler(_: Request, exc: PermissionDeniedError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": str(exc.msg)}
+    )
+
+
+async def superuser_permission_error_handler(_: Request, exc: SuperuserPermissionError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": str(exc.msg)}
+    )
