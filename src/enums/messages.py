@@ -9,3 +9,4 @@ class Messages(Enum):
     PERMISSION_REVOKED = "revoke_permission"
     ACCESS_FILES = "access_files"
     ACCESS_ADMIN_PANEL = "access_admin_panel"
+    COMPANY_UPDATE_NOTIFICATION = "company_update_notification"

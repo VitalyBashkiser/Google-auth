@@ -18,6 +18,7 @@ JWTTokenDep = Annotated[str | None, Depends(CheckHTTPBearer())]
 UserDep = Annotated[User, Depends(AuthService().get_current_user)]
 AdminServiceDep = Annotated[AdminService, Depends(AdminService)]
 SessionDep = Annotated[AsyncSession, Depends(get_async_session)]
+UserIDDep = Annotated[int, Depends(AuthService().get_current_user_id)]
 
 
 async def is_superuser(current_user: UserDep) -> UserDep:

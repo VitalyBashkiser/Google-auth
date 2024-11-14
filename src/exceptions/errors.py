@@ -31,10 +31,29 @@ class PermissionDeniedError(Exception):
         super().__init__(self.msg)
 
 
+class BadRequestError(Exception):
+    def __init__(self, model_name: str, id_: Any) -> None:
+        self.msg = f"{model_name} with given identifier - {id_} caused a bad request."
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        super().__init__(self.msg)
+
+
+class AlreadySubscribedError(BadRequestError):
+    def __init__(self, model_name: str, id_: Any) -> None:
+        super().__init__(model_name="Company", id_=id_)
+        self.msg = f"{model_name} with identifier {id_} already has an active subscription."
+
+
 class PageNotFoundError(ObjectNotFound):
     def __init__(self, url: str) -> None:
         super().__init__(model_name="Page", id_=url)
         self.msg = f"Failed to retrieve the webpage at {url}."
+
+
+class CompanyNotFoundError(ObjectNotFound):
+    def __init__(self, url: str) -> None:
+        super().__init__(model_name="Company", id_=url)
+        self.msg = f"Failed to retrieve the Company by name at {url}."
 
 
 class UserAlreadyExistsError(ObjectAlreadyExists):
