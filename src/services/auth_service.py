@@ -296,6 +296,38 @@ class AuthService:
                 raise UserNotAuthenticatedError
             return user
 
+    async def get_current_user_id(
+        self,
+        token: str = Depends(CheckHTTPBearer()),
+        uow: UnitOfWork = Depends(UnitOfWork)
+    ) -> int:
+        """
+        Retrieve only the ID of the current user based on the provided JWT token.
+
+        Args:
+            token (str): The JWT token from the request.
+            uow (UnitOfWork): The unit of work instance for database transactions.
+
+        Returns:
+            int: The ID of the currently authenticated user.
+
+        Raises:
+            UserNotAuthenticatedError: If the token is invalid or the user is not found.
+        """
+        try:
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            email = payload.get("sub")
+            if not email:
+                raise UserNotAuthenticatedError
+        except JWTError:
+            raise UserNotAuthenticatedError
+
+        async with uow:
+            user = await uow.users.find_one_or_none(email=email)
+            if not user:
+                raise UserNotAuthenticatedError
+            return user.id
+
     async def decode_token(self, token: str) -> dict:
         """
         Decode a JWT token without verifying its validity.
