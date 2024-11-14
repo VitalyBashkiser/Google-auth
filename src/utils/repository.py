@@ -5,6 +5,10 @@ from typing import TypeVar, List
 from sqlalchemy import insert, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from loguru import logger
+from src.models.user_subscription import UserSubscription
+from src.models.users import User
+
 
 class AbstractRepository(ABC):
     @abstractmethod
@@ -158,5 +162,49 @@ class SQLAlchemyRepository(AbstractRepository):
             List[ModelType]: List of records with outdated data.
         """
         stmt = select(self.model).where(self.model.last_updated < threshold)
+        logger.info(f"Checking for companies with last_updated < {threshold}")
         res = await self.session.execute(stmt)
         return res.scalars().all()
+
+    async def subscription_exists(self, user_id: int, company_id: int) -> bool:
+        """
+        Checks if the user's subscription to the company exists.
+
+        Args:
+            user_id(int): User ID.
+            company_id(int): Company ID.
+
+        Returns:
+            bool: True if the subscription exists, otherwise False.
+        """
+        result = await self.session.execute(
+            select(self.model).filter_by(user_id=user_id, company_id=company_id)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def add_subscription(self, user_id: int, company_id: int):
+        """
+        Adds a user subscription to company updates.
+
+        Args:
+            user_id(int): User ID.
+            company_id(int): Company ID.
+        """
+        stmt = insert(self.model).values(user_id=user_id, company_id=company_id)
+        await self.session.execute(stmt)
+        await self.session.flush()
+
+    async def get_users_subscribed_to_company(self, company_id: int) -> List[User]:
+        """
+        Gets a list of users subscribed to company updates.
+
+        Args:
+            company_id (int): Company ID.
+
+        Returns:
+            List[User]: List of users subscribed to the company.
+        """
+        result = await self.session.execute(
+            select(User).join(self.model).filter(self.model.company_id == company_id)
+        )
+        return result.scalars().all()

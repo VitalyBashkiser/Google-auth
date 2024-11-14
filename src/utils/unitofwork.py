@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.db import async_session_maker
 from src.repositories.company import CompanyRepository
+from src.repositories.user_subscription import UserSubscriptionRepository
 from src.repositories.users import UsersRepository
 
 
@@ -15,6 +16,7 @@ class ABCUnitOfWork(ABC):
     # Repository classes
     users: UsersRepository
     company: CompanyRepository
+    user_subscription: UserSubscriptionRepository
 
     @abstractmethod
     def __init__(self) -> None:
@@ -43,6 +45,7 @@ class UnitOfWork(ABCUnitOfWork):
         self.session = self.session_factory()
         self.users = UsersRepository(self.session)
         self.company = CompanyRepository(self.session)
+        self.user_subscription = UserSubscriptionRepository(self.session)
 
         return self
 
