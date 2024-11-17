@@ -8,8 +8,40 @@ from src.enums.messages import Messages
 from src.exceptions.errors import PageNotFoundError, CompanyNotFoundError, AlreadySubscribedError
 from src.notifications.notifier import notify_user
 from src.parsers.company_parser import parse_company
+from src.schemas.company import CompanyDataModel
 from src.utils.template_renderer import render_message
 from src.utils.unitofwork import UnitOfWork
+
+
+async def fetch_or_update_company(uow: UnitOfWork, company_code: str, company_data: CompanyDataModel | None = None) -> CompanyDataModel:
+    """
+    Fetches company data from a parser or updates it in the database.
+
+    Args:
+        uow (UnitOfWork): The unit of work instance for database transactions.
+        company_code (str): The company code to look up or update.
+        company_data (CompanyDataModel | None): Existing company data from the database.
+
+    Returns:
+        CompanyDataModel: The updated or fetched company data.
+    """
+    async with uow:
+        parsed_data = parse_company(company_code)
+
+        parsed_data_model = CompanyDataModel(**parsed_data)
+
+        if company_data:
+            if parsed_data_model.dict(exclude={"id"}) != company_data.dict(exclude={"id"}):
+                await uow.company.update_one(company_data.id, parsed_data_model.dict(exclude={"id"}))
+                logger.info(f"Company {company_code} is updated successfully.")
+        else:
+            new_id = await uow.company.add_one(parsed_data_model.dict(exclude={"id"}))
+            parsed_data_model.id = new_id
+            logger.info(f"Company {company_code} is added successfully.")
+
+        await uow.commit()
+        return parsed_data_model
+
 
 
 async def get_company_data(uow: UnitOfWork, company_code: str, use_cache: bool = True) -> dict:
@@ -28,19 +60,9 @@ async def get_company_data(uow: UnitOfWork, company_code: str, use_cache: bool =
         company = await uow.company.find_one_or_none(code=company_code)
 
         if use_cache and company and company.last_updated > datetime.utcnow() - timedelta(days=1):
-            return company
+            return CompanyDataModel.from_orm(company)
 
-        try:
-            company_data = parse_company(company_code)
-        except PageNotFoundError as e:
-            raise e
-
-        if company:
-            await uow.company.update_instance(company, company_data)
-        else:
-            await uow.company.add_one(company_data)
-
-        return company_data
+        return await fetch_or_update_company(uow, company_code, CompanyDataModel.from_orm(company) if company else None)
 
 
 async def update_company_data_for_all(uow: UnitOfWork) -> None:
@@ -54,26 +76,21 @@ async def update_company_data_for_all(uow: UnitOfWork) -> None:
         None
     """
     async with uow:
-        stale_companies = await uow.company.get_stale_records(threshold=datetime.utcnow() - timedelta(days=1))
-        logger.info(f"Find {len(stale_companies)} old data companies for updates")
+        stale_companies = await uow.company.get_stale_records_as_dict(
+            threshold=datetime.utcnow() - timedelta(days=1)
+        )
+        logger.info(f"Find {len(stale_companies)} outdated companies to update")
 
-        for company in stale_companies:
-            updated_data = parse_company(company.code)
-            current_data = company.to_dict()
+        for company_data in stale_companies:
+            company_model = CompanyDataModel(**company_data)
+            updated_data = CompanyDataModel(**parse_company(company_model.code))
 
-            differences = DeepDiff(current_data, updated_data, ignore_order=True)
+            if updated_data.dict() != company_model.dict():
+                await uow.company.update_one(company_model.id, updated_data.dict())
+                logger.info(f"Company {company_model.code} is updated")
 
-            if differences:
-                logger.info(f"Updating data for company {company.name} ({company.code})")
-                logger.debug(f"Differences found: {differences}")
-
-                await uow.company.update_instance(company, updated_data)
-
-                await notify_subscribers_of_update(company.id, uow)
-
-                await uow.commit()
-            else:
-                logger.info(f"No updates for company {company.name} ({company.code})")
+        await uow.commit()
+        logger.info("All obsolete companies have been updated")
 
 
 async def subscribe_user_to_company(uow: UnitOfWork, company_code: str, user_id: int) -> dict:
@@ -102,9 +119,10 @@ async def subscribe_user_to_company(uow: UnitOfWork, company_code: str, user_id:
             raise AlreadySubscribedError(model_name="UserSubscription", id_=user_id)
 
         await uow.user_subscription.add_subscription(user_id, company.id)
+        company_name = company.name
         await uow.commit()
 
-        return {"message": f"You are now subscribed to updates for company {company.name}"}
+        return {"message": f"You are now subscribed to updates for company {company_name}"}
 
 
 async def notify_subscribers_of_update(company_id: int, uow: UnitOfWork):

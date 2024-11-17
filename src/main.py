@@ -4,15 +4,14 @@ from fastapi import FastAPI
 from src.api.main_routers import main_router
 from src.api.main_handlers import setup_handlers
 from src.core.config.app_settings import AppSettings
-from src.schedulers.company_scheduler import start_company_scheduler
+from src.schedulers.company_scheduler import lifespan
 
-app = FastAPI(title="Authorisation via Email")
+app = FastAPI(title="Authorisation via Email", lifespan=lifespan)
 
 setup_handlers(app)
 
 app.include_router(main_router)
 
-start_company_scheduler()
 
 if __name__ == "__main__":
     uvicorn.run(

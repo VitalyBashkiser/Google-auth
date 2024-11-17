@@ -3,6 +3,7 @@ from starlette import status
 
 from src.api.dependencies import UOWDep, AdminServiceDep
 from src.enums.permissions import Permission
+from src.schemas.admin import PermissionResponse
 
 router = APIRouter(
     prefix="/admin",
@@ -10,13 +11,15 @@ router = APIRouter(
 )
 
 
-@router.post("/grant_permission/{user_id}", status_code=status.HTTP_200_OK)
+@router.post("/grant_permission/{user_id}",
+             response_model=PermissionResponse,
+             status_code=status.HTTP_200_OK
+             )
 async def grant_permission(
     uow: UOWDep,
     user_id: int,
     permission: Permission,
     admin_service: AdminServiceDep,
-    # superuser: SuperuserDep
 ):
     """
     Grant a specific permission to a user.
@@ -36,7 +39,10 @@ async def grant_permission(
     return await admin_service.grant_permission(uow, user_id, permission)
 
 
-@router.post("/revoke_permission/{user_id}", status_code=status.HTTP_200_OK)
+@router.post("/revoke_permission/{user_id}",
+             response_model=PermissionResponse,
+             status_code=status.HTTP_200_OK
+             )
 async def revoke_permission(
     uow: UOWDep,
     user_id: int,

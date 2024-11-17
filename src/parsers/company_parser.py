@@ -1,5 +1,6 @@
 import time
 import re
+from datetime import datetime
 
 import requests
 from selectolax.parser import HTMLParser
@@ -191,7 +192,8 @@ def parse_company(company_code: str) -> dict:
         "last_inspection_date": extract_last_inspection_date(parser),
         "company_profile": clean_text(parser.css_first("div.seo-table-generated-text").text()) if parser.css_first(
             "div.seo-table-generated-text") else None,
-
+        "last_updated": datetime.utcnow(),
     }
 
     return data
+

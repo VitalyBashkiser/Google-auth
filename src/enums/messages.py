@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class Messages(Enum):
+class Messages(StrEnum):
     EMAIL_CONFIRMATION = "confirmation_email"
     PASSWORD_RESET = "password_reset"
     CHANGE_EMAIL = "change_email"

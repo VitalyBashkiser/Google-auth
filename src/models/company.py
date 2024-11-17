@@ -26,4 +26,4 @@ class Company(Base):
     subscribers = relationship("UserSubscription", back_populates="company")
 
     def __repr__(self):
-        return f"<Company(name={self.name}, code={self.code})>"
+        return f"<Company(id={self.id}, code={self.code})>"

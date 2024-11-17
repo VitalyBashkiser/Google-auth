@@ -2,7 +2,9 @@ import traceback
 
 from fastapi import APIRouter, Query
 
-from src.api.dependencies import UOWDep, UserDep, UserIDDep
+from src.api.dependencies import UOWDep, UserIDDep
+from src.schemas.company import CompanyDataModel
+from src.schemas.subscription import SubscriptionResponseModel
 from src.services.company_service import get_company_data, subscribe_user_to_company
 
 router = APIRouter(
@@ -11,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.get("/company/{company_code}")
+@router.get("/company/{company_code}", response_model=CompanyDataModel)
 async def fetch_company_info(uow: UOWDep, company_code: str, use_cache: bool = Query(True)):
     """
     Endpoint for getting company information.
@@ -26,7 +28,7 @@ async def fetch_company_info(uow: UOWDep, company_code: str, use_cache: bool = Q
     return await get_company_data(uow, company_code, use_cache)
 
 
-@router.post("/subscribe/{company_code}")
+@router.post("/subscribe/{company_code}", response_model=SubscriptionResponseModel)
 async def subscribe_to_company_updates(
     company_code: str,
     uow: UOWDep,
@@ -47,4 +49,3 @@ async def subscribe_to_company_updates(
         dict: Subscription confirmation message.
     """
     return await subscribe_user_to_company(uow, company_code, current_user_id)
-
