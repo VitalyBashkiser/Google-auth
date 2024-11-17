@@ -1,3 +1,4 @@
+import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import TypeVar, List
@@ -6,7 +7,6 @@ from sqlalchemy import insert, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from loguru import logger
-from src.models.user_subscription import UserSubscription
 from src.models.users import User
 
 
@@ -35,6 +35,18 @@ class AbstractRepository(ABC):
         raise NotImplementedError
 
     async def get_stale_records(self, threshold: datetime):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def subscription_exists(self, user_id: int, company_id: int) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def add_subscription(self, user_id: int, company_id: int):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_users_subscribed_to_company(self, company_id: int) -> List[User]:
         raise NotImplementedError
 
 
@@ -166,6 +178,7 @@ class SQLAlchemyRepository(AbstractRepository):
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
+
     async def subscription_exists(self, user_id: int, company_id: int) -> bool:
         """
         Checks if the user's subscription to the company exists.
@@ -208,3 +221,37 @@ class SQLAlchemyRepository(AbstractRepository):
             select(User).join(self.model).filter(self.model.company_id == company_id)
         )
         return result.scalars().all()
+
+    async def get_stale_records_as_dict(self, threshold: datetime) -> List[dict]:
+        """
+        Retrieves records with outdated data as dictionaries.
+
+        Args:
+            threshold (datetime): The date and time threshold for determining outdated data.
+
+        Returns:
+            List[dict]: List of dictionaries representing outdated records.
+        """
+        stmt = (
+            select(
+                self.model.id,
+                self.model.name,
+                self.model.code,
+                self.model.status,
+                self.model.registration_date,
+                self.model.authorized_capital,
+                self.model.legal_form,
+                self.model.main_activity,
+                self.model.contact_info,
+                self.model.authorized_person,
+                self.model.tax_info,
+                self.model.registration_authorities,
+                self.model.last_inspection_date,
+                self.model.company_profile,
+                self.model.last_updated,
+            )
+            .where(self.model.last_updated < threshold)
+        )
+        logger.info(f"Checking for companies with last_updated < {threshold}")
+        res = await self.session.execute(stmt)
+        return [dict(row) for row in res.fetchall()]

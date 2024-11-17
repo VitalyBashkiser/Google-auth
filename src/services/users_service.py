@@ -25,15 +25,13 @@ class UsersService:
         Raises:
             Exception: If the user with the specified ID is not found.
         """
-        current_user = await auth_service.get_current_user(jwt_token, uow)
-        if not current_user:
+        if not await auth_service.get_current_user(jwt_token, uow):
             raise UserNotAuthenticatedError
 
         async with uow:
-            user = await uow.users.find_one_or_none(id=user_id)
-            if not user:
-                raise UserNotFoundError
-            return user
+            if user := await uow.users.find_one_or_none(id=user_id):
+                return user
+            raise UserNotFoundError
 
 
 user_service = UsersService()

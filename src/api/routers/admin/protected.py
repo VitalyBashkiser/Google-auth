@@ -5,6 +5,7 @@ from starlette import status
 
 from src.api.dependencies import permission_dep, AdminServiceDep
 from src.enums.permissions import Permission
+from src.schemas.admin import AdminResponse
 
 router = APIRouter(
     prefix="/protected",
@@ -12,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.get("/files", status_code=status.HTTP_200_OK)
+@router.get("/files", response_model=AdminResponse, status_code=status.HTTP_200_OK)
 async def access_files(
         admin_service: AdminServiceDep,
         permission: None = permission_dep(Permission.ACCESS_ADMIN_PANEL)
@@ -25,7 +26,7 @@ async def access_files(
     return await admin_service.access_files()
 
 
-@router.get("/admin_panel", status_code=status.HTTP_200_OK)
+@router.get("/admin_panel", response_model=AdminResponse, status_code=status.HTTP_200_OK)
 async def access_admin_panel(
         admin_service: AdminServiceDep,
         permission: None = permission_dep(Permission.ACCESS_ADMIN_PANEL)
