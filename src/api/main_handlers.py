@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from src.exceptions.error_handler import ExceptionHandlerMiddleware
 from src.exceptions.errors import (
-    UserNotFoundError,
     UserAlreadyExistsError,
     InvalidCredentialsError,
     EmailNotConfirmedError,
@@ -9,9 +8,12 @@ from src.exceptions.errors import (
     PasswordResetError,
     EmailSendError,
     UserNotAuthenticatedError,
+    PermissionDeniedError,
+    SuperuserPermissionError,
+    ObjectNotFound,
+    AlreadySubscribedError,
 )
 from src.exceptions.handlers import (
-    user_not_found_handler,
     user_already_exists_handler,
     invalid_credentials_handler,
     email_not_confirmed_handler,
@@ -19,10 +21,13 @@ from src.exceptions.handlers import (
     handle_password_reset_error,
     email_send_error_handler,
     user_not_authenticated_handler,
+    permission_denied_error_handler,
+    superuser_permission_error_handler,
+    object_not_found_handler,
+    already_subscribe_error_handler,
 )
 
 exception_handlers = [
-    (UserNotFoundError, user_not_found_handler),
     (UserAlreadyExistsError, user_already_exists_handler),
     (InvalidCredentialsError, invalid_credentials_handler),
     (EmailNotConfirmedError, email_not_confirmed_handler),
@@ -30,6 +35,10 @@ exception_handlers = [
     (PasswordResetError, handle_password_reset_error),
     (EmailSendError, email_send_error_handler),
     (UserNotAuthenticatedError, user_not_authenticated_handler),
+    (PermissionDeniedError, permission_denied_error_handler),
+    (SuperuserPermissionError, superuser_permission_error_handler),
+    (ObjectNotFound, object_not_found_handler),
+    (AlreadySubscribedError, already_subscribe_error_handler),
 ]
 
 

@@ -18,10 +18,42 @@ class ObjectAlreadyExists(Exception):
 
 
 class EmailSendError(Exception):
-    def __init__(self, email: str, action: str = "send email"):
+    def __init__(self, email: str, action: str = "send templates"):
         self.msg = f"Failed to {action} to {email}. Please try again."
         self.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         super().__init__(self.msg)
+
+
+class PermissionDeniedError(Exception):
+    def __init__(self, action: str = "perform this action"):
+        self.msg = f"You don't have the necessary permissions to {action}."
+        self.status_code = status.HTTP_403_FORBIDDEN
+        super().__init__(self.msg)
+
+
+class BadRequestError(Exception):
+    def __init__(self, model_name: str, id_: Any) -> None:
+        self.msg = f"{model_name} with given identifier - {id_} caused a bad request."
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        super().__init__(self.msg)
+
+
+class AlreadySubscribedError(BadRequestError):
+    def __init__(self, model_name: str, id_: Any) -> None:
+        super().__init__(model_name="Company", id_=id_)
+        self.msg = f"{model_name} with identifier {id_} already has an active subscription."
+
+
+class PageNotFoundError(ObjectNotFound):
+    def __init__(self, url: str) -> None:
+        super().__init__(model_name="Page", id_=url)
+        self.msg = f"Failed to retrieve the webpage at {url}."
+
+
+class CompanyNotFoundError(ObjectNotFound):
+    def __init__(self, url: str) -> None:
+        super().__init__(model_name="Company", id_=url)
+        self.msg = f"Failed to retrieve the Company by name at {url}."
 
 
 class UserAlreadyExistsError(ObjectAlreadyExists):
@@ -71,4 +103,11 @@ class UserNotAuthenticatedError(AuthenticationError):
     def __init__(self):
         self.msg = "User is not authenticated. Please provide valid credentials."
         self.status_code = status.HTTP_401_UNAUTHORIZED
+        super().__init__(self.msg)
+
+
+class SuperuserPermissionError(PermissionDeniedError):
+    def __init__(self, action: str = "manage permissions"):
+        self.msg = f"Only superusers can {action}."
+        self.status_code = status.HTTP_403_FORBIDDEN
         super().__init__(self.msg)

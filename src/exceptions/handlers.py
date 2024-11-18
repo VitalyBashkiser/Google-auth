@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from starlette import status
 
 from src.exceptions.errors import (
-    UserNotFoundError,
     UserAlreadyExistsError,
     InvalidCredentialsError,
     EmailNotConfirmedError,
@@ -11,12 +10,16 @@ from src.exceptions.errors import (
     PasswordResetError,
     EmailSendError,
     UserNotAuthenticatedError,
+    PermissionDeniedError,
+    SuperuserPermissionError,
+    ObjectNotFound,
+    AlreadySubscribedError,
 )
 
 app = FastAPI()
 
 
-async def user_not_found_handler(_: Request, exc: UserNotFoundError) -> JSONResponse:
+async def object_not_found_handler(_: Request, exc: ObjectNotFound) -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"message": str(exc.msg)})
 
 
@@ -45,4 +48,22 @@ async def email_send_error_handler(_: Request, exc: EmailSendError) -> JSONRespo
 
 
 async def user_not_authenticated_handler(_: Request, exc: UserNotAuthenticatedError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content={"message": exc.msg})
+    return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"message": exc.msg})
+
+
+async def permission_denied_error_handler(_: Request, exc: PermissionDeniedError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": str(exc.msg)}
+    )
+
+
+async def superuser_permission_error_handler(_: Request, exc: SuperuserPermissionError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": str(exc.msg)}
+    )
+
+
+async def already_subscribe_error_handler(_: Request, exc: AlreadySubscribedError) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content={"message": str(exc.msg)})
