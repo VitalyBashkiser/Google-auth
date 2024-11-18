@@ -6,6 +6,7 @@ from src.api.dependencies import UOWDep, UserIDDep
 from src.schemas.company import CompanyDataModel
 from src.schemas.subscription import SubscriptionResponseModel
 from src.services.company_service import get_company_data, subscribe_user_to_company
+from src.enums.choose_company import SourceEnum
 
 router = APIRouter(
     prefix="/company",
@@ -14,7 +15,11 @@ router = APIRouter(
 
 
 @router.get("/company/{company_code}", response_model=CompanyDataModel)
-async def fetch_company_info(uow: UOWDep, company_code: str, use_cache: bool = Query(True)):
+async def fetch_company_info(uow: UOWDep,
+                             company_code: str,
+                             use_cache: bool = Query(True),
+                             source: SourceEnum = Query(SourceEnum.YOURCONTROL)
+                             ):
     """
     Endpoint for getting company information.
 
@@ -22,10 +27,11 @@ async def fetch_company_info(uow: UOWDep, company_code: str, use_cache: bool = Q
         uow (UOWDep): Dependency for unit of work management.
         company_code (str): Company code to search.
         use_cache (bool): If True, checks the database first before parsing.
+        source (str): Company code. Defaults to "youcontrol".
     Returns:
         dict: Company data.
     """
-    return await get_company_data(uow, company_code, use_cache)
+    return await get_company_data(uow, company_code, source, use_cache)
 
 
 @router.post("/subscribe/{company_code}", response_model=SubscriptionResponseModel)

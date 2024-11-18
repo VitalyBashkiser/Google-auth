@@ -1,11 +1,10 @@
-import traceback
 from datetime import datetime, timedelta
 
 from loguru import logger
-from deepdiff import DeepDiff
+from starlette.responses import HTMLResponse
 
 from src.enums.messages import Messages
-from src.exceptions.errors import PageNotFoundError, CompanyNotFoundError, AlreadySubscribedError
+from src.exceptions.errors import CompanyNotFoundError, AlreadySubscribedError
 from src.notifications.notifier import notify_user
 from src.parsers.company_parser import parse_company
 from src.schemas.company import CompanyDataModel
@@ -13,22 +12,29 @@ from src.utils.template_renderer import render_message
 from src.utils.unitofwork import UnitOfWork
 
 
-async def fetch_or_update_company(uow: UnitOfWork, company_code: str, company_data: CompanyDataModel | None = None) -> CompanyDataModel:
+async def fetch_or_update_company(uow: UnitOfWork,
+                                  company_code: str,
+                                  source: str = "youcontrol",
+                                  company_data: CompanyDataModel | None = None
+                                  ) -> CompanyDataModel:
     """
     Fetches company data from a parser or updates it in the database.
 
     Args:
         uow (UnitOfWork): The unit of work instance for database transactions.
         company_code (str): The company code to look up or update.
+        source (str): The source of the company data.
         company_data (CompanyDataModel | None): Existing company data from the database.
 
     Returns:
         CompanyDataModel: The updated or fetched company data.
     """
     async with uow:
-        parsed_data = parse_company(company_code)
+        parsed_data = parse_company(company_code, source=source)
 
+        logger.info(f"Parsed data: {parsed_data}")
         parsed_data_model = CompanyDataModel(**parsed_data)
+        logger.info(f"Model created: {parsed_data_model}")
 
         if company_data:
             if parsed_data_model.dict(exclude={"id"}) != company_data.dict(exclude={"id"}):
@@ -43,14 +49,14 @@ async def fetch_or_update_company(uow: UnitOfWork, company_code: str, company_da
         return parsed_data_model
 
 
-
-async def get_company_data(uow: UnitOfWork, company_code: str, use_cache: bool = True) -> dict:
+async def get_company_data(uow: UnitOfWork, company_code: str, source: str = "youcontrol", use_cache: bool = True) -> dict:
     """
     Gets company data from a database or parses it from a website.
 
     Args:
         uow (UnitOfWork): The unit of work instance for database transactions.
         company_code(str): Company code to look up.
+        source (str): The source of the company data.
         use_cache(bool): If True, checks the cache (database) before parsing.
 
     Returns:
@@ -60,17 +66,18 @@ async def get_company_data(uow: UnitOfWork, company_code: str, use_cache: bool =
         company = await uow.company.find_one_or_none(code=company_code)
 
         if use_cache and company and company.last_updated > datetime.utcnow() - timedelta(days=1):
-            return CompanyDataModel.from_orm(company)
+            return CompanyDataModel.from_orm(company).dict()
 
-        return await fetch_or_update_company(uow, company_code, CompanyDataModel.from_orm(company) if company else None)
+        return await fetch_or_update_company(uow, company_code, source, CompanyDataModel.from_orm(company) if company else None)
 
 
-async def update_company_data_for_all(uow: UnitOfWork) -> None:
+async def update_company_data_for_all(uow: UnitOfWork, source: str = "youcontrol") -> None:
     """
     Updates information for all companies whose data is outdated by more than 24 hours.
 
     Args:
         uow (UnitOfWork): The unit of work instance for database transactions.
+        source (str): The source of the company data.
 
     Returns:
         None
@@ -83,10 +90,10 @@ async def update_company_data_for_all(uow: UnitOfWork) -> None:
 
         for company_data in stale_companies:
             company_model = CompanyDataModel(**company_data)
-            updated_data = CompanyDataModel(**parse_company(company_model.code))
+            updated_data = CompanyDataModel(**parse_company(company_model.code, source=source))
 
-            if updated_data.dict() != company_model.dict():
-                await uow.company.update_one(company_model.id, updated_data.dict())
+            if updated_data.dict(exclude={"id"}) != company_model.dict(exclude={"id"}):
+                await uow.company.update_one(company_model.id, updated_data.dict(exclude={"id"}))
                 logger.info(f"Company {company_model.code} is updated")
 
         await uow.commit()
@@ -146,4 +153,6 @@ async def notify_subscribers_of_update(company_id: int, uow: UnitOfWork):
                 "company_name": company.name,
             }
             message_content = await render_message(Messages.COMPANY_UPDATE_NOTIFICATION, context)
+            if isinstance(message_content, HTMLResponse):
+                message_content = message_content.body.decode("utf-8")
             await notify_user(user.email, "Company Update Notification", message_content)
